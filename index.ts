@@ -1,25 +1,23 @@
 import * as http from "http";
+import * as net from "net";
 
-let listeners = new Set();
+let listeners = new Set<http.ServerResponse>();
 
 let server = http.createServer((req, res) => {
-    listeners.add(socket);
-    console.log(`Connectoion from ${socket.address().address}`);
-    socket.on("close", () => {
-        console.log("Connection closed");
-        listeners.delete(socket);
+    res.setHeader("content-type", "text/html");
+    res.flushHeaders();
+    listeners.add(res);
+    console.log(
+        `Connection from ${(req.socket.address() as net.AddressInfo).address}`
+    );
+    res.on("close", () => {
+        listeners.delete(res);
     });
-    socket.on("error", () => {
-        console.log("Connection error");
-        listeners.delete(socket);
+    res.on("error", () => {
+        listeners.delete(res);
     });
-    socket.on("end", () => {
-        console.log("Connection end");
-        listeners.delete(socket);
-    });
-    socket.on("timeout", () => {
-        console.log("Connection timeout");
-        listeners.delete(socket);
+    res.on("finish", () => {
+        listeners.delete(res);
     });
 });
 
