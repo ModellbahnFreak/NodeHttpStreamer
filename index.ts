@@ -1,38 +1,41 @@
-import * as http from "http";
 import * as net from "net";
 import * as fs from "fs";
 
 const BOUNDARY = "seroiuslywhatsthat";
 const JPEG_END = new Uint8Array([0xff, 0xd9, 0xff, 0xd8]);
 
-let listeners = new Set<http.ServerResponse>();
+let listeners = new Set<net.Socket>();
 
-let server = http.createServer((req, res) => {
-    if (req.method == "GET" && req.url == "/") {
-        res.setHeader(
-            "content-type",
-            `multipart/x-mixed-replace;boundary=${BOUNDARY}`
-        );
-        res.writeHead(200);
-        listeners.add(res);
-        console.log(
-            `Connection from ${
-                (req.socket.address() as net.AddressInfo).address
-            }`
-        );
-        res.on("close", () => {
-            listeners.delete(res);
-        });
-        res.on("error", () => {
-            listeners.delete(res);
-        });
-        res.on("finish", () => {
-            listeners.delete(res);
-        });
-        res.write("\r\n");
-    } else {
-        res.writeHead(400, "Not supported");
-    }
+let server = net.createServer((socket) => {
+    let header = "";
+    socket.on("data", (data) => {
+        header += data.toString("utf8");
+        if (header.includes("\r\n\r\n")) {
+            const trimmed = header.trim();
+            if (header.startsWith("GET / HTTP/1.1")) {
+                socket.write(
+                    `HTTP/1.1 200 OK\r\ncontent-type: multipart/x-mixed-replace;boundary=${BOUNDARY}\r\nDate: ${new Date().toString()}\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\n`
+                );
+                listeners.add(socket);
+                console.log(
+                    `Connection from ${
+                        (socket.address() as net.AddressInfo).address
+                    }`
+                );
+                socket.on("close", () => {
+                    listeners.delete(socket);
+                });
+                socket.on("end", () => {
+                    listeners.delete(socket);
+                });
+                socket.on("error", () => {
+                    listeners.delete(socket);
+                });
+            } else {
+                console.log("Illegal http head");
+            }
+        }
+    });
 });
 
 let buffer = Buffer.from([]);
@@ -54,13 +57,6 @@ process.stdin.on("data", (data) => {
             ),
             buffer.subarray(prevBoundary, boundaryPos),
         ]);
-        fs.writeFile(
-            `./img${(counter++).toString().padStart(4, "0")}.jpg`,
-            buffer.subarray(prevBoundary, boundaryPos),
-            (err) => {
-                if (err) console.error(err);
-            }
-        );
         console.log(sendData.subarray(70, 90));
         console.log(sendData.subarray(sendData.length - 10));
         console.log("----------------------");
@@ -70,10 +66,10 @@ process.stdin.on("data", (data) => {
     if (prevBoundary > 2) {
         buffer = buffer.subarray(prevBoundary);
     }
-    //console.log(`Buffer size: ${buffer.length}`);
+    console.log(`Buffer size: ${buffer.length}`);
     if (sendData.length >= 1) {
         listeners.forEach((l) => {
-            if (l.writable && l.socket?.writable) {
+            if (l.writable) {
                 l.write(sendData);
             } else {
                 listeners.delete(l);
