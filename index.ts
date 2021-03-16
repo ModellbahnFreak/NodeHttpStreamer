@@ -14,25 +14,31 @@ let server = net.createServer((socket) => {
             const trimmed = header.trim();
             if (header.startsWith("GET / HTTP/1.1")) {
                 socket.write(
-                    `HTTP/1.1 200 OK\r\ncontent-type: multipart/x-mixed-replace;boundary=${BOUNDARY}\r\nDate: ${new Date().toString()}\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\n`
+                    `HTTP/1.1 200 OK\r\ncontent-type: multipart/x-mixed-replace;boundary=${BOUNDARY}\r\nDate: ${new Date().toString()}\r\n`
                 );
+                /*socket.write(
+                    `HTTP/1.1 200 OK\r\ncontent-type: text/html\r\nDate: ${new Date().toString()}\r\nConnection: keep-alive\r\n\r\n<htm><body>`
+                );*/
                 listeners.add(socket);
-                console.log(
-                    `Connection from ${
-                        (socket.address() as net.AddressInfo).address
-                    }`
-                );
-                socket.on("close", () => {
+                console.log(`Connection from ${socket.remoteAddress}`);
+                socket.on("close", (err) => {
+                    console.log("Connection closed:", err);
                     listeners.delete(socket);
                 });
                 socket.on("end", () => {
+                    console.log("Connection ended");
                     listeners.delete(socket);
                 });
-                socket.on("error", () => {
+                socket.on("error", (err) => {
+                    console.log("Conneciton errored: " + err);
                     listeners.delete(socket);
                 });
             } else {
                 console.log("Illegal http head");
+                socket.write(
+                    `HTTP/1.1 400 Bad Request\r\nDate: ${new Date().toString()}\r\n`
+                );
+                socket.end();
             }
         }
     });
@@ -57,16 +63,16 @@ process.stdin.on("data", (data) => {
             ),
             buffer.subarray(prevBoundary, boundaryPos),
         ]);
-        console.log(sendData.subarray(70, 90));
+        /*console.log(sendData.subarray(70, 90));
         console.log(sendData.subarray(sendData.length - 10));
-        console.log("----------------------");
+        console.log("----------------------");*/
         prevBoundary = boundaryPos;
         boundaryPos = buffer.indexOf(JPEG_END, prevBoundary) + 2;
     }
     if (prevBoundary > 2) {
         buffer = buffer.subarray(prevBoundary);
     }
-    console.log(`Buffer size: ${buffer.length}`);
+    //console.log(`Buffer size: ${buffer.length}`);
     if (sendData.length >= 1) {
         listeners.forEach((l) => {
             if (l.writable) {
@@ -77,6 +83,10 @@ process.stdin.on("data", (data) => {
             }
         });
     }
+    /*listeners.forEach((l) => {
+        l.write(data);
+        console.log(`Sent to ${l.remoteAddress}`);
+    });*/
 });
 
 server.listen(8080);
