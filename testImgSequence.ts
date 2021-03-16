@@ -15,4 +15,4 @@ let timer = setInterval(() => {
         }
     );
     counter = (counter % 25) + 1;
-}, 1000);
+}, 40);
