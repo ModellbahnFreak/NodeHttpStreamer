@@ -4,7 +4,7 @@ import * as fs from "fs";
 const BOUNDARY = "seroiuslywhatsthat";
 const JPEG_END = new Uint8Array([0xff, 0xd9, 0xff, 0xd8]);
 
-let listeners = new Set<net.Socket>();
+let listeners = new Map<net.Socket, boolean>();
 
 let server = net.createServer((socket) => {
     let header = "";
@@ -19,7 +19,7 @@ let server = net.createServer((socket) => {
                 /*socket.write(
                     `HTTP/1.1 200 OK\r\ncontent-type: text/html\r\nDate: ${new Date().toString()}\r\nConnection: keep-alive\r\n\r\n<htm><body>`
                 );*/
-                listeners.add(socket);
+                listeners.set(socket, true);
                 console.log(`Connection from ${socket.remoteAddress}`);
                 socket.on("close", (err) => {
                     console.log("Connection closed:", err);
@@ -74,12 +74,23 @@ process.stdin.on("data", (data) => {
     }
     //console.log(`Buffer size: ${buffer.length}`);
     if (sendData.length >= 1) {
-        listeners.forEach((l) => {
-            if (l.writable) {
-                l.write(sendData);
-            } else {
-                listeners.delete(l);
-                console.log("Found non active connection");
+        listeners.forEach((ready, l) => {
+            if (ready) {
+                if (l.writable) {
+                    listeners.set(l, false);
+                    l.write(sendData, (err) => {
+                        if (err) {
+                            console.log("Connection error:", err);
+                            l.end();
+                            listeners.delete(l);
+                        } else {
+                            listeners.set(l, true);
+                        }
+                    });
+                } else {
+                    listeners.delete(l);
+                    console.log("Found non active connection");
+                }
             }
         });
     }
