@@ -3,6 +3,9 @@ import * as fs from "fs";
 
 const BOUNDARY = "seroiuslywhatsthat";
 const JPEG_END = new Uint8Array([0xff, 0xd9, 0xff, 0xd8]);
+const settings = {
+    listenPort: 8080
+};
 
 let listeners = new Map<net.Socket, boolean>();
 
@@ -56,8 +59,7 @@ process.stdin.on("data", (data) => {
         sendData = Buffer.concat([
             sendData,
             Buffer.from(
-                `\r\n--${BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-length: ${
-                    boundaryPos - prevBoundary
+                `\r\n--${BOUNDARY}\r\nContent-Type: image/jpeg\r\nContent-length: ${boundaryPos - prevBoundary
                 }\r\n\r\n`,
                 "utf8"
             ),
@@ -100,4 +102,31 @@ process.stdin.on("data", (data) => {
     });*/
 });
 
-server.listen(8080);
+let lastParam: string = "";
+for (const p of process.argv) {
+    const [leftPart, ...rightParts] = p.split("=");
+    const param = leftPart.startsWith("-") ? leftPart.trim() : "";
+    const argument = (leftPart.startsWith("-") ? "" : `${leftPart}=`) + rightParts.join("=");
+    if (param.length > 0) {
+        if (param.startsWith("--")) {
+            lastParam = param.substring(2);
+        } else if (param.startsWith("-")) {
+            lastParam = param.substring(1);
+        }
+    }
+    if (argument.length > 0) {
+        switch (lastParam) {
+            case "port":
+            case "p":
+                const portNum = parseInt(argument, 10);
+                if (isFinite(portNum) && portNum >= 1 && portNum <= 65535) {
+                    settings.listenPort = portNum;
+                }
+                lastParam = "";
+                break;
+        }
+    }
+}
+
+server.listen(settings.listenPort);
+console.log("Listening on port " + settings.listenPort);
