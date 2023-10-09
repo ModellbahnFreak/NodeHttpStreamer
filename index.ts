@@ -4,7 +4,8 @@ import * as fs from "fs";
 const BOUNDARY = "seroiuslywhatsthat";
 const JPEG_END = new Uint8Array([0xff, 0xd9, 0xff, 0xd8]);
 const settings = {
-    listenPort: 8080
+    listenPort: 8080,
+    noDataTimeout: 10000,
 };
 
 let listeners = new Map<net.Socket, boolean>();
@@ -49,8 +50,10 @@ let server = net.createServer((socket) => {
 
 let buffer = Buffer.from([]);
 let counter = 0;
+let lastDataTime = Date.now();
 
 process.stdin.on("data", (data) => {
+    lastDataTime = Date.now();
     buffer = Buffer.concat([buffer, data]);
     let prevBoundary = 0;
     let boundaryPos = buffer.indexOf(JPEG_END, prevBoundary) + 2;
@@ -102,6 +105,11 @@ process.stdin.on("data", (data) => {
     });*/
 });
 
+process.stdin.on("close", () => {
+    console.log("Stdin closed. Exiting.");
+    process.exit();
+});
+
 let lastParam: string = "";
 for (const p of process.argv) {
     const [leftPart, ...rightParts] = p.split("=");
@@ -124,8 +132,25 @@ for (const p of process.argv) {
                 }
                 lastParam = "";
                 break;
+            case "no-data-timeout":
+            case "t":
+                const timeoutMs = parseInt(argument, 10);
+                if (isFinite(timeoutMs) && timeoutMs >= 0) {
+                    settings.noDataTimeout = timeoutMs;
+                }
+                lastParam = "";
+                break;
         }
     }
+}
+
+if (settings.noDataTimeout > 0) {
+    const noDataListener = setInterval(() => {
+        if (Date.now() - lastDataTime > settings.noDataTimeout) {
+            console.log(`No data for ${Date.now() - lastDataTime}ms. Exiting`);
+            process.exit(1);
+        }
+    }, 2000);
 }
 
 server.listen(settings.listenPort);
