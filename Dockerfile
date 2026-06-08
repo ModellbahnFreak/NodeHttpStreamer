@@ -12,4 +12,4 @@ RUN chmod a+x cam.sh && \
     npm i && \
     npm run build
 
-CMD [ "/cam.sh" ]
+CMD [ "/home/node/NodeHttpStreamer/cam.sh" ]
