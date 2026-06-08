@@ -10,7 +10,7 @@ ADD . /home/node/NodeHttpStreamer
 RUN chown -R node:node /home/node/NodeHttpStreamer
 
 WORKDIR /home/node/NodeHttpStreamer
-USER node:node
+USER node
 
 RUN chmod a+x cam.sh && \
     npm i && \
