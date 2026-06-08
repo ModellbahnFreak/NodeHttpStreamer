@@ -2,6 +2,8 @@ FROM node:alpine
 
 RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/ --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main/ rpicam-apps
 
+RUN addgroup -g 44 video && addgroup node video
+
 ADD . /home/node/NodeHttpStreamer
 RUN chown -R node:node /home/node/NodeHttpStreamer
 
