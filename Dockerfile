@@ -1,13 +1,11 @@
 FROM node:alpine
 
-RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/ --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main/ rpicam-apps && \
-    addgroup -g 1000 cam && \
-    adduser -h /home/cam -g cam -u 1000 cam
+RUN apk add --no-cache --repository=http://dl-cdn.alpinelinux.org/alpine/edge/testing/ --repository=http://dl-cdn.alpinelinux.org/alpine/edge/community/ --repository=http://dl-cdn.alpinelinux.org/alpine/edge/main/ rpicam-apps
 
-ADD . /home/cam/NodeHttpStreamer
+ADD . /home/node/NodeHttpStreamer
 
-WORKDIR /home/cam/NodeHttpStreamer
-USER cam:cam
+WORKDIR /home/node/NodeHttpStreamer
+USER node:node
 
 RUN chmod a+x cam.sh && \
     npm i && \
