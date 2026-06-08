@@ -54,7 +54,7 @@ let lastDataTime = Date.now();
 
 process.stdin.on("data", (data) => {
     lastDataTime = Date.now();
-    buffer = Buffer.concat([buffer, data]);
+    buffer = Buffer.concat([buffer, data as NonSharedBuffer]);
     let prevBoundary = 0;
     let boundaryPos = buffer.indexOf(JPEG_END, prevBoundary) + 2;
     let sendData = Buffer.from([]);
@@ -113,8 +113,8 @@ process.stdin.on("close", () => {
 let lastParam: string = "";
 for (const p of process.argv) {
     const [leftPart, ...rightParts] = p.split("=");
-    const param = leftPart.startsWith("-") ? leftPart.trim() : "";
-    const argument = (leftPart.startsWith("-") ? "" : `${leftPart}=`) + rightParts.join("=");
+    const param = leftPart?.startsWith("-") ? leftPart.trim() : "";
+    const argument = (leftPart?.startsWith("-") ? "" : `${leftPart}=`) + rightParts.join("=");
     if (param.length > 0) {
         if (param.startsWith("--")) {
             lastParam = param.substring(2);
